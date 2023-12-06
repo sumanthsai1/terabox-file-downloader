@@ -107,7 +107,7 @@ export async function GET(req, res) {
       root: "1",
     };
 
-    const req2 = await axios.get("https://www.4funbox.com/share/list", {
+    const req2 = await axios.get("https://www.1024tera.com/share/list", {
       params,
       headers,
       withCredentials: true,

@@ -136,18 +136,17 @@ export default function Home() {
     }
   }, [token]);
 
-  const { data, error, isLoading, mutate } = useSWR(
-    token ? token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`) : null,
-    async (urls) => {
+  useEffect(() => {
+  if (token) {
+    const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
+    mutate(async () => {
       const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
       // ... process responses
-    },
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+      return responses; // Assuming responses is the new data
+    });
+  }
+}, [token, mutate]);
+
 
   useEffect(() => {
     if (data || error) {

@@ -129,19 +129,17 @@ export default function Home() {
     setToken(encryptedData);
   };
 
-  useEffect(() => {
-    if (token) {
-      const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-      Promise.all(urls.map(url => fetchWithToken(url)))
-        .then(responses => {
-          // ... process responses
-          mutate(urls, responses, false);
-        })
-        .catch(error => {
-          // Handle errors if needed
-        });
-    }
-  }, [token]);
+useEffect(() => {
+  if (token) {
+    const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
+    mutate(async () => {
+      const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+      // ... process responses
+      return responses; // Assuming responses is the new data
+    });
+  }
+}, [token]);
+
 
   useEffect(() => {
     if (token) {
@@ -236,14 +234,15 @@ export default function Home() {
           <div className="w-full">
             <div className="rounded-md flex justify-center items-center ">
               <Image
-                className="blur-md hover:filter-none rounded-md p-3 transition duration-300 ease-in-out transform scale-100 hover:scale-110 hover:rounded-md opacity-100 hover:opacity-100 "
-                style={{ objectFit: "contain" }}
-                loading="lazy"
-                src={data?.thumbs?.url1}
-                height={200}
-                width={200}
-                alt={""}
-              />
+  className="blur-md hover:filter-none rounded-md p-3 transition duration-300 ease-in-out transform scale-100 hover:scale-110 hover:rounded-md opacity-100 hover:opacity-100 "
+  style={{ objectFit: "contain" }}
+  loading="lazy"
+  src={data && Array.isArray(data) ? data[0]?.thumbs?.url1 : undefined}
+  height={200}
+  width={200}
+  alt={""}
+/>
+
             </div>
           </div>
           <div className="pl-3 pt-3">

@@ -106,14 +106,20 @@ export default function Home() {
   const [disableInput, setdisableInput] = useState(false);
 
   const { data, error, isLoading } = useSWR(
-    token ? [`/api?data=${encodeURIComponent(token)}`] : null,
-    ([url]) => fetchWithToken(url),
-    {
-      revalidateIfStale: false,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+  token
+    ? token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
+    : null,
+  async (urls) => {
+    const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+    return responses;
+  },
+  {
+    revalidateIfStale: false,
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+  }
+);
+
   
   useEffect(() => {
     if (data || error) {
@@ -128,29 +134,47 @@ export default function Home() {
   }, [err, error, data]);
 
   async function Submit() {
-    setError("");
-    setdisableInput(true);
-    if (!link) {
-      setError("Please enter a link");
-      return;
-    }
-    if (!checkUrlPatterns(link)) {
-      setError("Invalid Link");
-      return;
-    }
-    const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
-    const expirationTime = Date.now() + 20000;
+  setError("");
+  setdisableInput(true);
+  
+  if (!link) {
+    setError("Please enter a link");
+    return;
+  }
+
+  // Split the input links by commas
+  const links = link.split(",");
+
+  // Validate each link
+  const invalidLinks = links.filter(link => !checkUrlPatterns(link.trim()));
+
+  if (invalidLinks.length > 0) {
+    setError("Invalid Link(s): " + invalidLinks.join(", "));
+    setdisableInput(false);
+    return;
+  }
+
+  const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
+  const expirationTime = Date.now() + 20000;
+
+  // Create an array to store encrypted tokens for each link
+  const encryptedTokens = [];
+
+  for (const singleLink of links) {
     const dataToEncrypt = JSON.stringify({
-      token: link,
+      token: singleLink.trim(),
       expiresAt: expirationTime,
     });
     const encryptedData = CryptoJS.AES.encrypt(
       dataToEncrypt,
       secretKey
     ).toString();
-    setToken(encryptedData);
+
+    encryptedTokens.push(encryptedData);
   }
 
+  setToken(encryptedTokens);
+}
   return (
     <div className="pt-6 mx-12">
       <nav className="flex justify-between ">

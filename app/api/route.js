@@ -50,12 +50,14 @@ const headers = {
 
 export async function GET(req, res) {
   const { searchParams: params } = new URL(req.url);
-  if (!params.has("data")) {
+  if (!params.has("data") || !params.has("index")) {
     return NextResponse.json({ error: "Missing data" }, { status: 400 });
   }
   const encryptedData = params.get("data");
-  if (!encryptedData) {
-    return NextResponse.json({ error: "Missing data" }, { status: 400 });
+  const index = parseInt(params.get("index"), 10);
+
+  if (!encryptedData || isNaN(index)) {
+    return NextResponse.json({ error: "Invalid data" }, { status: 400 });
   }
   const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
   let url;
@@ -107,6 +109,7 @@ export async function GET(req, res) {
       root: "1",
     };
 
+      try {
     const req2 = await axios.get("https://www.1024tera.com/share/list", {
       params,
       headers,
@@ -116,6 +119,7 @@ export async function GET(req, res) {
     if (!"list" in responseData2) {
       return NextResponse.json({ error: "Invalid response" }, { status: 400 });
     }
+
     return NextResponse.json(responseData2?.list[0], { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Unknown Error" }, { status: 400 });

@@ -128,6 +128,16 @@ export default function Home() {
     ).toString();
     setToken(encryptedData);
   };
+  const { data, error, isLoading } = useSWR<DataType>(
+  token
+    ? token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
+    : null,
+  async (urls) => {
+    const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+    return responses;
+  }
+);
+
 
 useEffect(() => {
   if (token) {

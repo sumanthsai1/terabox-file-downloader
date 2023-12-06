@@ -181,7 +181,7 @@ export default function Home() {
               disabled={disableInput}
               className="max-w-80"
               placeholder="Enter the link"
-              onChange={(e) => setLink(e.target.value)}
+              onChange={(e) => setLinks(e.target.value)}
             />
           </div>
         </div>

@@ -141,17 +141,6 @@ useEffect(() => {
 }, [token]);
 
 
-  useEffect(() => {
-    if (token) {
-      const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-      mutate(async () => {
-        const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-        // ... process responses
-        return responses; // Assuming responses is the new data
-      });
-    }
-  }, [token, mutate]);
-
   const { data, error, isLoading } = useSWR(
     token
       ? token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
@@ -247,12 +236,12 @@ useEffect(() => {
           </div>
           <div className="pl-3 pt-3">
             <div className="pt-10"></div>
-            <h1 className="text-sm lg:text-xl text-white ">
-              Title:{" "}
-              <span className="text-white  text-md lg:text-2xl font-bold ">
-                {data?.server_filename}
-              </span>
-            </h1>
+           <h1 className="text-sm lg:text-xl text-white ">
+  Title:{" "}
+  <span className="text-white  text-md lg:text-2xl font-bold ">
+    {data && !Array.isArray(data) ? data.server_filename : ""}
+  </span>
+</h1>
             <h1 className="text-sm lg:text-xl text-white ">
               File Size:{" "}
               <span className="text-white text-md lg:text-2xl font-bold ">

@@ -108,14 +108,17 @@ export default function Home() {
   const Submit = async () => {
     setError("");
     setDisableInput(true);
+
     if (!link) {
       setError("Please enter a link");
       return;
     }
+
     if (!checkUrlPatterns(link)) {
       setError("Invalid Link");
       return;
     }
+
     const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
     const expirationTime = Date.now() + 20000;
     const dataToEncrypt = JSON.stringify({
@@ -128,28 +131,16 @@ export default function Home() {
     ).toString();
     setToken(encryptedData);
   };
-  const { data, error, isLoading } = useSWR<DataType>(
-  token
-    ? token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
-    : null,
-  async (urls) => {
-    const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-    return responses;
-  }
-);
 
-
-useEffect(() => {
-  if (token) {
-    const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-    mutate(async () => {
-      const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-      // ... process responses
-      return responses; // Assuming responses is the new data
-    });
-  }
-}, [token]);
-
+  useEffect(() => {
+    if (token) {
+      const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
+      mutate(async () => {
+        const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+        return responses;
+      });
+    }
+  }, [token]);
 
   const { data, error, isLoading } = useSWR(
     token
@@ -157,7 +148,6 @@ useEffect(() => {
       : null,
     async (urls) => {
       const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-      // ... process responses
       return responses;
     }
   );
@@ -167,12 +157,13 @@ useEffect(() => {
       setDisableInput(false);
       setLink("");
     }
-    if (err || error) {
+
+    if (error && error.message) {
       setTimeout(() => {
         setError("");
       }, 5000);
     }
-  }, [err, error, data]);
+  }, [error, data]);
 
   return (
     <div className="pt-6 mx-12">

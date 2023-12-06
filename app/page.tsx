@@ -98,21 +98,49 @@ function checkUrlPatterns(url: string) {
 
   return false;
 }
-export default function Home() {
-  const [links, setLinks] = useState<string>("");
-  const [error, setError] = useState<string>("");
-  const [token, setToken] = useState<string | string[]>([]);
-  const [disableInput, setDisableInput] = useState<boolean>(false);
 
-  const { data, error: apiError, isLoading } = useSWR(
-    token
-      ? (typeof token === 'string'
-          ? [`/api?data=${encodeURIComponent(token)}&index=0`]
-          : token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`))
-      : null,
+export default function Home() {
+  const [link, setLink] = useState("");
+  const [err, setError] = useState("");
+  const [token, setToken] = useState("");
+  const [disableInput, setdisableInput] = useState(false);
+
+  const Submit = async () => {
+    setError("");
+    setdisableInput(true);
+    if (!link) {
+      setError("Please enter a link");
+      return;
+    }
+    if (!checkUrlPatterns(link)) {
+      setError("Invalid Link");
+      return;
+    }
+    const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
+    const expirationTime = Date.now() + 20000;
+    const dataToEncrypt = JSON.stringify({
+      token: link,
+      expiresAt: expirationTime,
+    });
+    const encryptedData = CryptoJS.AES.encrypt(
+      dataToEncrypt,
+      secretKey
+    ).toString();
+    setToken(encryptedData);
+  };
+
+  useEffect(() => {
+    if (token) {
+      const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
+      mutate(urls);
+    }
+  }, [token]);
+
+  const { data, error, isLoading, mutate } = useSWR(
+    token ? token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`) : null,
     async (urls) => {
       const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-      return responses;
+      // ... process responses
     },
     {
       revalidateIfStale: false,
@@ -122,45 +150,16 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (data || apiError) {
-      setDisableInput(false);
-      setLinks("");
+    if (data || error) {
+      setdisableInput(false);
+      setLink("");
     }
-    if (error || apiError) {
+    if (err || error) {
       setTimeout(() => {
         setError("");
       }, 5000);
     }
-  }, [error, apiError, data]);
-
-  async function handleSubmit() {
-    setError("");
-    setDisableInput(true);
-    
-    if (!links) {
-      setError("Please enter links");
-      return;
-    }
-
-    const linksArray = links.split(',').map(link => link.trim());
-
-    if (!linksArray.every(checkUrlPatterns)) {
-      setError("Invalid Link");
-      return;
-    }
-
-    const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
-    const expirationTime = Date.now() + 20000;
-    const dataToEncrypt = JSON.stringify({
-      token: linksArray,
-      expiresAt: expirationTime,
-    });
-    const encryptedData = CryptoJS.AES.encrypt(
-      dataToEncrypt,
-      secretKey
-    ).toString();
-    setToken(encryptedData);
-  }
+  }, [err, error, data]);
 
   return (
     <div className="pt-6 mx-12">

@@ -6,21 +6,33 @@ import { useEffect, useState } from "react";
 import useSWR from "swr";
 import CryptoJS from "crypto-js";
 import Image from "next/image";
+import useSWR, { mutate } from 'swr';
 
-const fetchWithToken = async (url: URL | RequestInfo) => {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const errorRes = await res.json();
-    const error = new Error();
-    error.message = errorRes?.error;
-    throw error;
-  }
 
-  return await res.json();
-};
 
-function getFormattedSize(sizeBytes: number) {
-  let size, unit;
+
+
+
+export default function Home() {
+  const [link, setLink] = useState("");
+  const [err, setError] = useState("");
+  const [token, setToken] = useState("");
+  const [disableInput, setDisableInput] = useState(false);
+
+  const fetchWithToken = async (url: URL | RequestInfo) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errorRes = await res.json();
+      const error = new Error();
+      error.message = errorRes?.error;
+      throw error;
+    }
+    return await res.json();
+  };
+
+  const getFormattedSize = (sizeBytes: number) => {
+    // ... (your existing code)
+     let size, unit;
 
   if (sizeBytes >= 1024 * 1024) {
     size = sizeBytes / (1024 * 1024);
@@ -34,10 +46,12 @@ function getFormattedSize(sizeBytes: number) {
   }
 
   return `${size.toFixed(2)} ${unit}`;
-}
+  };
 
-function convertEpochToDateTime(epochTimestamp: number) {
-  const normalDate = new Date(epochTimestamp * 1000);
+
+  const convertEpochToDateTime = (epochTimestamp: number) => {
+    // ... (your existing code)
+      const normalDate = new Date(epochTimestamp * 1000);
 
   const options: Intl.DateTimeFormatOptions = {
     year: "numeric",
@@ -50,19 +64,21 @@ function convertEpochToDateTime(epochTimestamp: number) {
 
   const formattedDate = normalDate.toLocaleDateString(undefined, options);
   return formattedDate;
-}
+  };
 
-function isValidUrl(url: string | URL) {
-  try {
+  const isValidUrl = (url: string | URL) => {
+    // ... (your existing code)
+     try {
     new URL(url);
     return true;
   } catch (error) {
     return false;
   }
-}
+  };
 
-function checkUrlPatterns(url: string) {
-  const patterns = [
+  const checkUrlPatterns = (url: string) => {
+    // ... (your existing code)
+    const patterns = [
     /ww\.mirrobox\.com/,
     /www\.nephobox\.com/,
     /freeterabox\.com/,
@@ -86,28 +102,11 @@ function checkUrlPatterns(url: string) {
     /www\.teraboxapp\.com/,
   ];
 
-  if (!isValidUrl(url)) {
-    return false;
-  }
-
-  for (const pattern of patterns) {
-    if (pattern.test(url)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-export default function Home() {
-  const [link, setLink] = useState("");
-  const [err, setError] = useState("");
-  const [token, setToken] = useState("");
-  const [disableInput, setdisableInput] = useState(false);
+  };
 
   const Submit = async () => {
     setError("");
-    setdisableInput(true);
+    setDisableInput(true);
     if (!link) {
       setError("Please enter a link");
       return;
@@ -122,35 +121,24 @@ export default function Home() {
       token: link,
       expiresAt: expirationTime,
     });
-    const encryptedData = CryptoJS.AES.encrypt(
-      dataToEncrypt,
-      secretKey
-    ).toString();
+    const encryptedData = CryptoJS.AES.encrypt(dataToEncrypt, secretKey).toString();
     setToken(encryptedData);
   };
 
   useEffect(() => {
     if (token) {
       const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-      mutate(urls);
+      mutate(urls, async () => {
+        const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+        // ... process responses
+        return responses; // Assuming responses is the new data
+      });
     }
   }, [token]);
 
   useEffect(() => {
-  if (token) {
-    const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-    mutate(async () => {
-      const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-      // ... process responses
-      return responses; // Assuming responses is the new data
-    });
-  }
-}, [token, mutate]);
-
-
-  useEffect(() => {
     if (data || error) {
-      setdisableInput(false);
+      setDisableInput(false);
       setLink("");
     }
     if (err || error) {
@@ -159,6 +147,7 @@ export default function Home() {
       }, 5000);
     }
   }, [err, error, data]);
+
 
   return (
     <div className="pt-6 mx-12">
@@ -179,7 +168,7 @@ export default function Home() {
               disabled={disableInput}
               className="max-w-80"
               placeholder="Enter the link"
-              onChange={(e) => setLinks(e.target.value)}
+              onChange={(e) => setLink(e.target.value)}
             />
           </div>
         </div>

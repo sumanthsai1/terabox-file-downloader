@@ -98,83 +98,70 @@ function checkUrlPatterns(url: string) {
 
   return false;
 }
-
 export default function Home() {
-  const [link, setLink] = useState("");
-  const [err, setError] = useState("");
-  const [token, setToken] = useState("");
-  const [disableInput, setdisableInput] = useState(false);
+  const [links, setLinks] = useState<string>("");
+  const [error, setError] = useState<string>("");
+  const [token, setToken] = useState<string | string[]>([]);
+  const [disableInput, setDisableInput] = useState<boolean>(false);
 
-  const { data, error, isLoading } = useSWR(
-  token
-    ? token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
-    : null,
-  async (urls) => {
-    const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-    return responses;
-  },
-  {
-    revalidateIfStale: false,
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  }
-);
-
-  
-  useEffect(() => {
-    if (data || error) {
-      setdisableInput(false);
-      setLink("");
+  const { data, error: apiError, isLoading } = useSWR(
+    token
+      ? (typeof token === 'string'
+          ? [`/api?data=${encodeURIComponent(token)}&index=0`]
+          : token.map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`))
+      : null,
+    async (urls) => {
+      const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
+      return responses;
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     }
-    if (err || error) {
+  );
+
+  useEffect(() => {
+    if (data || apiError) {
+      setDisableInput(false);
+      setLinks("");
+    }
+    if (error || apiError) {
       setTimeout(() => {
         setError("");
       }, 5000);
     }
-  }, [err, error, data]);
+  }, [error, apiError, data]);
 
-  async function Submit() {
-  setError("");
-  setdisableInput(true);
-  
-  if (!link) {
-    setError("Please enter a link");
-    return;
-  }
+  async function handleSubmit() {
+    setError("");
+    setDisableInput(true);
+    
+    if (!links) {
+      setError("Please enter links");
+      return;
+    }
 
-  // Split the input links by commas
-  const links = link.split(",");
+    const linksArray = links.split(',').map(link => link.trim());
 
-  // Validate each link
-  const invalidLinks = links.filter(link => !checkUrlPatterns(link.trim()));
+    if (!linksArray.every(checkUrlPatterns)) {
+      setError("Invalid Link");
+      return;
+    }
 
-  if (invalidLinks.length > 0) {
-    setError("Invalid Link(s): " + invalidLinks.join(", "));
-    setdisableInput(false);
-    return;
-  }
-
-  const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
-  const expirationTime = Date.now() + 20000;
-
-  // Create an array to store encrypted tokens for each link
-  const encryptedTokens = [];
-
-  for (const singleLink of links) {
+    const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
+    const expirationTime = Date.now() + 20000;
     const dataToEncrypt = JSON.stringify({
-      token: singleLink.trim(),
+      token: linksArray,
       expiresAt: expirationTime,
     });
     const encryptedData = CryptoJS.AES.encrypt(
       dataToEncrypt,
       secretKey
     ).toString();
-
-    encryptedTokens.push(encryptedData);
+    setToken(encryptedData);
   }
 
-  setToken(encryptedTokens);
-}
   return (
     <div className="pt-6 mx-12">
       <nav className="flex justify-between ">

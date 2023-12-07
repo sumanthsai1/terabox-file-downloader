@@ -99,91 +99,87 @@ function checkUrlPatterns(url: string) {
   return false;
 }
 
+// ... (existing imports)
+
 export default function Home() {
-  const [link, setLink] = useState("");
+  const [links, setLinks] = useState<string[]>([]);
   const [err, setError] = useState("");
   const [token, setToken] = useState("");
   const [disableInput, setDisableInput] = useState(false);
 
-  const Submit = async () => {
+  const { data, error, isLoading } = useSWR(
+    token ? [`/api?data=${encodeURIComponent(token)}`] : null,
+    ([url]) => fetchWithToken(url),
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+  
+  useEffect(() => {
+    if (data || error) {
+      setDisableInput(false);
+      setLinks([]);
+    }
+    if (err || error) {
+      setTimeout(() => {
+        setError("");
+      }, 5000);
+    }
+  }, [err, error, data]);
+
+  async function Submit() {
     setError("");
     setDisableInput(true);
 
-    if (!link) {
-      setError("Please enter a link");
-      return;
-    }
-
-    if (!checkUrlPatterns(link)) {
-      setError("Invalid Link");
+    if (links.length === 0) {
+      setError("Please enter at least one link");
       return;
     }
 
     const secretKey = "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
     const expirationTime = Date.now() + 20000;
+
     const dataToEncrypt = JSON.stringify({
-      token: link,
+      tokens: links,
       expiresAt: expirationTime,
     });
+
     const encryptedData = CryptoJS.AES.encrypt(
       dataToEncrypt,
       secretKey
     ).toString();
+
     setToken(encryptedData);
-  };
-
-  useEffect(() => {
-    if (token) {
-      const urls = token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`);
-      mutate(async () => {
-        const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-        return responses;
-      });
-    }
-  }, [token]);
-
-  const { data, error, isLoading } = useSWR(
-    token
-      ? token.split(',').map((t, index) => `/api?data=${encodeURIComponent(t)}&index=${index}`)
-      : null,
-    async (urls) => {
-      const responses = await Promise.all(urls.map(url => fetchWithToken(url)));
-      return responses;
-    }
-  );
-
-  useEffect(() => {
-    if (data || error) {
-      setDisableInput(false);
-      setLink("");
-    }
-
-    if (error && error.message) {
-      setTimeout(() => {
-        setError("");
-      }, 5000);
-    }
-  }, [error, data]);
+  }
 
   return (
     <div className="pt-6 mx-12">
-      <nav className="flex justify-between ">
+      <nav className="flex justify-between">
         <div className="self-center">
           <Link href="/">Terabox Downloader</Link>
         </div>
+        <ul>
+          <li>
+            <Button className="bg-blue-600">
+              <Link href="https://t.me/+h3NOISYqpiowNTJl">Telegram</Link>
+            </Button>
+          </li>
+        </ul>
       </nav>
       <main className="mt-6 py-10 bg-slate-700 rounded-lg items-center flex flex-col justify-center gap-2">
         <h1 className="text-xl sm:text-3xl font-bold text-center text-white">
           Terabox Downloader
         </h1>
-        <p className="text-center text-white">Enter your Terabox link below</p>
-        <div className="flex flex-col justify-center ">
+        <p className="text-center text-white">Enter your Terabox links below</p>
+        <div className="flex flex-col justify-center">
           <div className="self-center text-black">
             <Input
               disabled={disableInput}
               className="max-w-80"
-              placeholder="Enter the link"
-              onChange={(e) => setLink(e.target.value)}
+              placeholder="Enter the links (comma-separated)"
+              onChange={(e) => setLinks(e.target.value.split(","))}
             />
           </div>
         </div>
@@ -202,7 +198,7 @@ export default function Home() {
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  {/* ... (your loading SVG path) */}
+                  {/* ... (existing loading spinner path) */}
                 </svg>
                 <span className="sr-only">Loading...</span>
               </div>
@@ -222,56 +218,30 @@ export default function Home() {
       {data && (
         <main className="my-10 py-10 bg-slate-700 rounded-lg items-start flex flex-col justify-start gap-2">
           <div className="w-full">
-            <div className="rounded-md flex justify-center items-center ">
-              <Image
-  className="blur-md hover:filter-none rounded-md p-3 transition duration-300 ease-in-out transform scale-100 hover:scale-110 hover:rounded-md opacity-100 hover:opacity-100 "
-  style={{ objectFit: "contain" }}
-  loading="lazy"
-  src={data && Array.isArray(data) ? data[0]?.thumbs?.url1 : undefined}
-  height={200}
-  width={200}
-  alt={""}
-/>
-
-            </div>
+            {links.map((link, index) => (
+              <div key={index} className="mb-4">
+                <p className="text-white text-xl font-bold">
+                  Download Link {index + 1}:
+                </p>
+                <Link
+                  href={link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-0 text-xl font-bold text-white self-center"
+                >
+                  <Button
+                    variant="default"
+                    className="py-0 bg-blue-700 mt-3 text-xl font-bold"
+                  >
+                    Download
+                  </Button>
+                </Link>
+              </div>
+            ))}
           </div>
-          <div className="pl-3 pt-3">
-            <div className="pt-10"></div>
-           <h1 className="text-sm lg:text-xl text-white ">
-  Title:{" "}
-  <span className="text-white  text-md lg:text-2xl font-bold ">
-    {data && !Array.isArray(data) ? data.server_filename : ""}
-  </span>
-</h1>
-            <h1 className="text-sm lg:text-xl text-white ">
-              File Size:{" "}
-              <span className="text-white text-md lg:text-2xl font-bold ">
-                {getFormattedSize(data.size)}
-              </span>
-            </h1>
-            <h1 className="text-sm lg:text-xl text-white ">
-              Uploaded On:{" "}
-              <span className="text-white  text-md lg:text-2xl font-bold ">
-                {convertEpochToDateTime(data.server_ctime)}
-              </span>
-            </h1>
-          </div>
-          <Link
-            href={data?.dlink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="py-0 text-xl font-bold text-white self-center"
-          >
-            <Button
-              variant="default"
-              className="py-0 bg-blue-700 mt-3 text-xl font-bold"
-            >
-              {" "}
-              Download
-            </Button>
-          </Link>
         </main>
       )}
     </div>
   );
 }
+
